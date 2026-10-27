@@ -34,7 +34,10 @@ if (!SpeechRecognitionAPI) {
         if (statusEl) {
             statusEl.textContent = 'Đang lắng nghe...';
             statusEl.classList.add('listening');
+            statusEl.classList.remove('error');
         }
+        const badge = document.getElementById('micBadge');
+        if (badge) badge.classList.add('listening');
     };
 
     // Xử lý kết quả nhận dạng
@@ -83,10 +86,13 @@ if (!SpeechRecognitionAPI) {
     };
 
     // Xử lý khi kết thúc nhận dạng
+    // Xử lý khi kết thúc nhận dạng
     recognition.onend = () => {
         startBtn.disabled = false;
         stopBtn.disabled = true;
         if (statusEl) statusEl.classList.remove('listening');
+        const badge = document.getElementById('micBadge');
+        if (badge) badge.classList.remove('listening');
     };
 
     // Xử lý sự kiện click nút — guard phòng khi recognition bị GC/reset
@@ -104,5 +110,26 @@ if (!SpeechRecognitionAPI) {
         } catch (e) {
             console.error('Không thể dừng nhận dạng:', e);
         }
+    });
+
+    // Copy kết quả ra clipboard (kèm fallback cho context không-secure)
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+        const text = output.textContent || '';
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            const btn = document.getElementById('copyBtn');
+            const original = btn.textContent;
+            btn.textContent = '✅ Đã copy';
+            setTimeout(() => { btn.textContent = original; }, 1500);
+        } catch (e) {
+            console.error('Không thể copy:', e);
+        }
+    });
+
+    // Xóa nội dung
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        output.textContent = '';
+        if (statusEl) statusEl.textContent = '';
     });
 }
