@@ -10,11 +10,40 @@ const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechReco
 // on unsupported browsers, crashing the whole script before UI could bind.
 let recognition = null;
 
+// Accumulated FINAL transcript. Interim text is rendered in a separate node so
+// re-renders never clobber confirmed results (and Copy only exports final text).
+let finalText = '';
+let copyFeedbackTimer = null;
+
+function setStatus(message, className) {
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.classList.remove('listening', 'error', 'unsupported');
+    if (className) statusEl.classList.add(className);
+}
+
+function clearStatus() {
+    if (!statusEl) return;
+    statusEl.textContent = '';
+    statusEl.classList.remove('listening', 'error', 'unsupported');
+}
+
+function renderOutput(interimText) {
+    // Build DOM nodes instead of innerHTML to avoid injecting untrusted
+    // transcript content into the page.
+    output.textContent = finalText;
+    if (interimText) {
+        const interim = document.createElement('i');
+        interim.className = 'interim';
+        interim.textContent = (finalText ? ' ' : '') + interimText;
+        output.appendChild(interim);
+    }
+}
+
 if (!SpeechRecognitionAPI) {
     const msg = 'Trình duyệt của bạn không hỗ trợ Web Speech API. Vui lòng dùng Chrome, Edge hoặc Safari phiên bản mới.';
     if (statusEl) {
-        statusEl.textContent = msg;
-        statusEl.classList.add('unsupported');
+        setStatus(msg, 'unsupported');
     } else {
         console.warn(msg);
     }
@@ -31,45 +60,32 @@ if (!SpeechRecognitionAPI) {
     recognition.onstart = () => {
         startBtn.disabled = true;
         stopBtn.disabled = false;
-        if (statusEl) {
-            statusEl.textContent = 'Đang lắng nghe...';
-            statusEl.classList.add('listening');
-            statusEl.classList.remove('error');
-        }
+        setStatus('Đang lắng nghe...', 'listening');
         const badge = document.getElementById('micBadge');
         if (badge) badge.classList.add('listening');
     };
 
     // Xử lý kết quả nhận dạng
     recognition.onresult = (event) => {
-        let finalTranscript = '';
         let interimTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-                finalTranscript += transcript;
+                finalText += transcript;
             } else {
                 interimTranscript += transcript;
             }
         }
 
-        // Render text safely — build DOM nodes instead of innerHTML to avoid
-        // injecting untrusted transcript content into the page.
-        output.textContent = finalTranscript;
-        if (interimTranscript) {
-            const interim = document.createElement('i');
-            interim.className = 'interim';
-            interim.textContent = interimTranscript;
-            output.appendChild(interim);
-        }
+        renderOutput(interimTranscript);
     };
 
     // Xử lý lỗi — thông báo rõ ràng theo từng loại lỗi
     recognition.onerror = (event) => {
         if (statusEl) statusEl.classList.remove('listening');
         const messages = {
-            'not-allowed': 'Quyền truy cập micro bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt.',
+            'not-allowed': 'Quyền truy cập micro bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt rồi thử lại.',
             'service-not-allowed': 'Dịch vụ nhận dạng giọng nói không khả dụng. Kiểm tra quyền micro của hệ thống.',
             'no-speech': 'Không phát hiện giọng nói. Vui lòng thử lại.',
             'audio-capture': 'Không tìm thấy micro. Vui lòng kiểm tra thiết bị ghi âm.',
@@ -77,20 +93,19 @@ if (!SpeechRecognitionAPI) {
             'aborted': 'Đã dừng ghi âm.'
         };
         const friendly = messages[event.error] || ('Có lỗi xảy ra: ' + event.error);
-        if (statusEl) {
-            statusEl.textContent = friendly;
-            statusEl.classList.add('error');
-        } else {
-            console.error('Lỗi nhận dạng:', event.error, friendly);
-        }
+        setStatus(friendly, 'error');
+        const badge = document.getElementById('micBadge');
+        if (badge) badge.classList.remove('listening');
     };
 
     // Xử lý khi kết thúc nhận dạng
-    // Xử lý khi kết thúc nhận dạng
     recognition.onend = () => {
+        // Luôn cho phép thử lại: người dùng có thể vừa cấp quyền micro
+        // trong UI trình duyệt sau lỗi not-allowed.
+        renderOutput('');
         startBtn.disabled = false;
         stopBtn.disabled = true;
-        if (statusEl) statusEl.classList.remove('listening');
+        if (statusEl && statusEl.classList.contains('listening')) clearStatus();
         const badge = document.getElementById('micBadge');
         if (badge) badge.classList.remove('listening');
     };
@@ -112,24 +127,28 @@ if (!SpeechRecognitionAPI) {
         }
     });
 
-    // Copy kết quả ra clipboard (kèm fallback cho context không-secure)
+    // Copy kết quả ra clipboard (kèm fallback cho context không-secure).
+    // Chỉ copy phần FINAL — không kèm text tạm thời đang hiển thị xám.
     document.getElementById('copyBtn').addEventListener('click', async () => {
-        const text = output.textContent || '';
+        const text = finalText.trim();
         if (!text) return;
+        const btn = document.getElementById('copyBtn');
         try {
             await navigator.clipboard.writeText(text);
-            const btn = document.getElementById('copyBtn');
-            const original = btn.textContent;
-            btn.textContent = '✅ Đã copy';
-            setTimeout(() => { btn.textContent = original; }, 1500);
         } catch (e) {
             console.error('Không thể copy:', e);
+            return;
         }
+        const original = btn.textContent;
+        btn.textContent = '✅ Đã copy';
+        if (copyFeedbackTimer) clearTimeout(copyFeedbackTimer);
+        copyFeedbackTimer = setTimeout(() => { btn.textContent = original; copyFeedbackTimer = null; }, 1500);
     });
 
     // Xóa nội dung
     document.getElementById('clearBtn').addEventListener('click', () => {
-        output.textContent = '';
-        if (statusEl) statusEl.textContent = '';
+        finalText = '';
+        renderOutput('');
+        clearStatus();
     });
 }
