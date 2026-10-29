@@ -29,3 +29,36 @@
 
 ### Vòng 1
 - Self-review: `node --check` pass; flow final/interim đã tách sạch — `onresult` chỉ cộng dồn vào `finalText` khi isFinal; `renderOutput` luôn dựng lại từ finalText nên không còn clobber; copy chỉ dùng finalText; clear reset cả state và class.
+
+---
+
+# Round 2 (2026-10-29) — Enterprise upgrade
+
+## Kết quả Review (audit đợt 2)
+
+| # | Severity | Vị trí | Vấn đề | Fix |
+|---|----------|--------|--------|-----|
+| 1 | MAJOR | clipboard API | `navigator.clipboard` không tồn tại/không cho phép ở context không-secure → copy fail im lặng | Fallback textarea + execCommand; báo lỗi rõ khi cả hai fail |
+| 2 | MINOR | script.js | Transcript mất khi reload trang | Auto-save localStorage (debounce 500ms) + restore khi load; Clear xóa cả bản lưu |
+| 3 | MINOR | index.html | Chỉ có dark palette; thiếu focus-visible | Thêm palette light qua `prefers-color-scheme: light` + `:focus-visible` cho button/select/output |
+| 4 | MINOR | script.js | Bấm Start khi recognition đang lỗi khó chịu — chỉ console.error | setStatus lỗi thân thiện thay vì im lặng |
+| 5 | MINOR | export/stats | Không có thông tin phiên | Live stats: số từ, ký tự, tổng thời gian ghi (accumulate qua các segment, interval được clear trong onend) |
+
+## Feature mới (đợt 2)
+
+1. **Language selector**: 10 locale (vi/en-US/en-GB/ja/zh-CN/ko/fr/de/es), lưu localStorage; đổi khi đang ghi âm sẽ restart recognition với lang mới.
+2. **Export .txt**: tải transcript về file `transcript-<timestamp>.txt` (Blob + revokeObjectURL), kèm header ngày giờ + ngôn ngữ.
+3. **Auto-save/restore + live stats**: transcript tự lưu (500ms debounce) và khôi phục sau reload; stats realtime (từ/ký tự/thời lượng ghi).
+
+## Trạng thái (Round 2)
+
+- [x] Deep review + plan
+- [x] Fix #1–#5
+- [x] Features: language selector, export, auto-save + stats
+- [x] `node --check` + self-review
+
+## Review Log (Round 2)
+
+### Vòng 2
+- Self-review: `node --check` pass. Giữ nguyên các fix đợt 1 (final/interim tách node, copy chỉ final, aria-live). Timer stats: interval chỉ chạy khi đang ghi (startStatsTimer/stopStatsTimer), tổng thời gian tích lũy qua `totalRecordedMs`. exportTimer debounce — không ghi localStorage mỗi interim. restoreSession() được gọi sau khi bind xong events; clearBtn xóa cả bản auto-save.
+
