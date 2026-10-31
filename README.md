@@ -1,5 +1,7 @@
 # Speech to Text — Chuyển giọng nói thành văn bản 🎙️
 
+[![CI](https://github.com/nbhson/app-speech-to-text/actions/workflows/ci.yml/badge.svg)](https://github.com/nbhson/app-speech-to-text/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Công cụ chuyển giọng nói thành văn bản **trực tiếp trên trình duyệt** bằng Web Speech API — không server, không gửi dữ liệu đi đâu, hoàn toàn miễn phí.
 
 ## Tính năng
