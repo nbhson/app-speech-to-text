@@ -1,0 +1,16 @@
+{
+  "name": "app-speech-to-text",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Speech to Text — chuyển giọng nói thành văn bản trực tiếp trên trình duyệt (Web Speech API)",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "@eslint/js": "^9",
+    "globals": "^15"
+  }
+}

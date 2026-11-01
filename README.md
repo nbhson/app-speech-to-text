@@ -25,6 +25,14 @@ open index.html
 > npx serve .
 > ```
 
+## Dev
+
+```bash
+npm install   # cài eslint (devDependencies)
+npm test      # chạy smoke tests (node --test)
+npm run lint  # eslint
+```
+
 ## Cấu trúc
 
 ```

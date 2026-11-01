@@ -68,7 +68,7 @@ function scheduleSave() {
         exportTimer = null;
         try {
             localStorage.setItem(LS_TRANSCRIPT_KEY, finalText);
-        } catch (e) { /* storage đầy/bị chặn — không fatal */ }
+        } catch { /* storage đầy/bị chặn — không fatal */ }
     }, 500);
 }
 
@@ -120,14 +120,13 @@ function restoreSession() {
                 langSelect.value = savedLang;
             }
         }
-    } catch (e) { /* private mode — bỏ qua */ }
+    } catch { /* private mode — bỏ qua */ }
     if (finalText) renderOutput('');
 }
 
 function exportTranscript() {
     const text = finalText.trim();
     if (!text) return;
-    const stamp = new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-');
     const lang = (langSelect && langSelect.value) || 'vi-VN';
     const header = `# Speech to Text — ${new Date().toLocaleString()} — ${lang}\n\n`;
     try {
@@ -169,7 +168,7 @@ if (!SpeechRecognitionAPI) {
         try {
             const saved = localStorage.getItem(LS_LANG_KEY);
             if (saved && LANGUAGES.some(l => l.code === saved)) langSelect.value = saved;
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
     }
 
     function applyLanguage() {
@@ -183,12 +182,12 @@ if (!SpeechRecognitionAPI) {
     // Đổi ngôn ngữ: nếu đang ghi âm thì khởi động lại để áp dụng
     if (langSelect) {
         langSelect.addEventListener('change', async () => {
-            try { localStorage.setItem(LS_LANG_KEY, langSelect.value); } catch (e) { /* ignore */ }
+            try { localStorage.setItem(LS_LANG_KEY, langSelect.value); } catch { /* ignore */ }
             if (recording) {
-                try { recognition.stop(); } catch (e) { /* ignore */ }
+                try { recognition.stop(); } catch { /* ignore */ }
                 // start lại với lang mới sau khi stop hoàn tất
                 setTimeout(() => {
-                    try { recognition.lang = langSelect.value; recognition.start(); } catch (e) { /* ignore */ }
+                    try { recognition.lang = langSelect.value; recognition.start(); } catch { /* ignore */ }
                 }, 250);
             } else {
                 recognition.lang = langSelect.value;
@@ -290,7 +289,7 @@ if (!SpeechRecognitionAPI) {
         try {
             await navigator.clipboard.writeText(text);
             ok = true;
-        } catch (e) {
+        } catch {
             // Fallback: textarea tạm + execCommand (deprecated nhưng vẫn hoạt động)
             try {
                 const ta = document.createElement('textarea');
@@ -301,7 +300,7 @@ if (!SpeechRecognitionAPI) {
                 ta.select();
                 ok = document.execCommand('copy');
                 ta.remove();
-            } catch (e2) {
+            } catch {
                 ok = false;
             }
         }
@@ -324,7 +323,7 @@ if (!SpeechRecognitionAPI) {
         totalRecordedMs = 0;
         renderOutput('');
         clearStatus();
-        try { localStorage.removeItem(LS_TRANSCRIPT_KEY); } catch (e) { /* ignore */ }
+        try { localStorage.removeItem(LS_TRANSCRIPT_KEY); } catch { /* ignore */ }
     });
 
     // Khôi phục transcript + ngôn ngữ từ phiên trước
